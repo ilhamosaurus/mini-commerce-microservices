@@ -145,6 +145,57 @@ export class TransactionsService {
     }
   }
 
+  async getTransactions(
+    user: User,
+    authentication: string,
+    limit?: number,
+    offset?: number,
+  ) {
+    try {
+      const account: Account = await lastValueFrom(
+        this.accountClient
+          .send('get_account_by_email', {
+            email: user.email,
+            Authentication: authentication,
+          })
+          .pipe(
+            catchError((val) => {
+              if (val.error.code === 404) {
+                return throwError(
+                  () =>
+                    new RpcException({
+                      message: 'Account not found',
+                      code: 404,
+                    }),
+                );
+              }
+
+              return throwError(() => new RpcException(val));
+            }),
+          ),
+      );
+
+      if (limit && offset) {
+        const transactions = await this.transactionRepository.paginatedFind(
+          limit,
+          offset,
+          { account_id: account._id },
+          { created_at: 'desc' },
+        );
+
+        return transactions;
+      }
+
+      const transactions = await this.transactionRepository.find({
+        account_id: account._id,
+      });
+
+      return transactions;
+    } catch (error) {
+      throw new RpcException(error);
+    }
+  }
+
   async getInvNumber(account: Account) {
     const today = new Date();
     const date = `${today.getFullYear()}-${(today.getMonth() + 1)

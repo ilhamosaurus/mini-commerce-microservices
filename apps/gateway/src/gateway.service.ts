@@ -269,4 +269,36 @@ export class GatewayService {
       throw new InternalServerErrorException(error);
     }
   }
+
+  async getTransactionsHistory(
+    authentication: string,
+    limit?: number,
+    offset?: number,
+  ) {
+    try {
+      const transactions = await lastValueFrom(
+        this.transactionClient
+          .send('get_transactions', {
+            Authentication: authentication,
+            limit,
+            offset,
+          })
+          .pipe(
+            catchError((val) => {
+              if (val.error.code === 404) {
+                return throwError(() => new NotFoundException(val.message));
+              }
+              return throwError(() => new InternalServerErrorException(val));
+            }),
+          ),
+      );
+
+      return transactions;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error);
+    }
+  }
 }

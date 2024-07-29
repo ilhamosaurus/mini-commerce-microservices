@@ -64,4 +64,23 @@ export class TransactionsController {
 
     return transactions;
   }
+
+  @MessagePattern('get_transactions')
+  @UseGuards(JwtGuard)
+  async getTransactions(
+    @CurrentUser() user: User,
+    @Payload()
+    payload: { Authentication: string; limit?: number; offset?: number },
+    @Ctx() ctx: RmqContext,
+  ) {
+    const transactions = await this.transactionsService.getTransactions(
+      user,
+      payload.Authentication,
+      payload.limit,
+      payload.offset,
+    );
+    this.rmqService.ack(ctx);
+
+    return transactions;
+  }
 }

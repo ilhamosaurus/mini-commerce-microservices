@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -95,5 +96,18 @@ export class GatewayController {
   @Post('payment')
   async payment(@Body() dto: PaymentDto, @Req() req: Request) {
     return this.gatewayService.payment(dto, req.cookies?.Authentication);
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('transactions')
+  async getTransactionsHistory(
+    @Req() req: Request,
+    @Query() query: { limit?: number; offset?: number },
+  ) {
+    return this.gatewayService.getTransactionsHistory(
+      req.cookies?.Authentication,
+      query.limit,
+      query.offset,
+    );
   }
 }

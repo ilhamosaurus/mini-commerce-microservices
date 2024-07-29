@@ -6,6 +6,7 @@ import {
   FilterQuery,
   Model,
   SaveOptions,
+  SortOrder,
   Types,
   UpdateQuery,
 } from 'mongoose';
@@ -73,8 +74,42 @@ export abstract class AbstractRepository<TDocument extends AbstractDocument> {
     });
   }
 
-  async find(filterQuery: FilterQuery<TDocument>) {
-    return this.model.find(filterQuery, {}, { lean: true });
+  async find(filterQuery?: FilterQuery<TDocument>) {
+    const document = await this.model.find(filterQuery, {}, { lean: true });
+
+    if (!document || document.length === 0) {
+      this.logger.warn('Document not found with filterQuery', filterQuery);
+      throw new RpcException({ error: 'Document not found.', code: 404 });
+    }
+
+    return document;
+  }
+
+  async paginatedFind(
+    limit: number,
+    offset: number,
+    filterQuery?: FilterQuery<TDocument>,
+    sorting?: { [key: string]: SortOrder },
+  ) {
+    let document = [];
+    if (!sorting) {
+      document = await this.model
+        .find(filterQuery, {}, { lean: true })
+        .skip((offset - 1) * limit)
+        .limit(limit);
+    } else if (sorting) {
+      document = await this.model
+        .find(filterQuery, {}, { lean: true, sort: sorting })
+        .skip((offset - 1) * limit)
+        .limit(limit);
+    }
+
+    if (!document || document.length === 0) {
+      this.logger.warn('Document not found with filterQuery', filterQuery);
+      throw new RpcException({ error: 'Document not found.', code: 404 });
+    }
+
+    return document;
   }
 
   async findOneAndDelete(filterQuery: FilterQuery<TDocument>) {
