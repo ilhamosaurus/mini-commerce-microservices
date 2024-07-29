@@ -1,14 +1,26 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  Patch,
   Post,
   Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { GatewayService } from './gateway.service';
-import { RegisterDto, LoginDto, JwtGuard, TopupDto } from '@app/common';
+import {
+  RegisterDto,
+  LoginDto,
+  JwtGuard,
+  TopupDto,
+  RolesGuard,
+  Roles,
+  CreateProductDto,
+  UpdateProductDto,
+} from '@app/common';
 import { Request, Response } from 'express';
 
 @Controller()
@@ -35,5 +47,46 @@ export class GatewayController {
   @Post('topup')
   async topup(@Body() dto: TopupDto, @Req() req: Request) {
     return this.gatewayService.topup(dto, req.cookies?.Authentication);
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(['MERCHANT'])
+  @Post('product')
+  async createProduct(@Body() dto: CreateProductDto, @Req() req: Request) {
+    return this.gatewayService.createProduct(dto, req.cookies?.Authentication);
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('product')
+  async getProducts(@Req() req: Request) {
+    return this.gatewayService.getProducts(req.cookies?.Authentication);
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('product/:id')
+  async getProduct(@Req() req: Request, @Param('id') id: string) {
+    return this.gatewayService.getProductById(id, req.cookies?.Authentication);
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(['MERCHANT'])
+  @Patch('product/:id')
+  async updateProduct(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() dto: UpdateProductDto,
+  ) {
+    return this.gatewayService.updateProduct(
+      id,
+      dto,
+      req.cookies?.Authentication,
+    );
+  }
+
+  @UseGuards(JwtGuard, RolesGuard)
+  @Roles(['MERCHANT'])
+  @Delete('product/:id')
+  async deleteProduct(@Req() req: Request, @Param('id') id: string) {
+    return this.gatewayService.deleteProduct(id, req.cookies?.Authentication);
   }
 }

@@ -1,9 +1,20 @@
-import { LoginDto, RegisterDto, TopupDto, User } from '@app/common';
+import {
+  ACCOUNT_SERVICE,
+  AUTH_SERVICE,
+  CreateProductDto,
+  LoginDto,
+  PRODUCT_SERVICE,
+  RegisterDto,
+  TopupDto,
+  UpdateProductDto,
+  User,
+} from '@app/common';
 import {
   ConflictException,
   Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Response } from 'express';
@@ -12,8 +23,9 @@ import { catchError, lastValueFrom, throwError } from 'rxjs';
 @Injectable()
 export class GatewayService {
   constructor(
-    @Inject('AUTH') private readonly authClient: ClientProxy,
-    @Inject('ACCOUNT') private readonly accountClient: ClientProxy,
+    @Inject(AUTH_SERVICE) private readonly authClient: ClientProxy,
+    @Inject(ACCOUNT_SERVICE) private readonly accountClient: ClientProxy,
+    @Inject(PRODUCT_SERVICE) private readonly productClient: ClientProxy,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -89,6 +101,140 @@ export class GatewayService {
 
       return account;
     } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async getProducts(authentication: string) {
+    try {
+      const products = await lastValueFrom(
+        this.productClient
+          .send('get_products', {
+            merchant_id: '',
+            Authentication: authentication,
+          })
+          .pipe(
+            catchError((val) => {
+              if (val.code === 404) {
+                return throwError(
+                  () => new NotFoundException('Products not found'),
+                );
+              }
+              return throwError(() => new InternalServerErrorException(val));
+            }),
+          ),
+      );
+
+      return products;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async getProductById(id: string, authentication: string) {
+    try {
+      const product = await lastValueFrom(
+        this.productClient
+          .send('get_product_by_id', { id, Authentication: authentication })
+          .pipe(
+            catchError((val) => {
+              if (val.code === 404) {
+                return throwError(
+                  () => new NotFoundException('Product not found'),
+                );
+              }
+              return throwError(() => new InternalServerErrorException(val));
+            }),
+          ),
+      );
+
+      return product;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async createProduct(dto: CreateProductDto, authentication: string) {
+    try {
+      const product = await lastValueFrom(
+        this.productClient
+          .send('create_product', { dto, Authentication: authentication })
+          .pipe(
+            catchError((val) => {
+              if (val.code === 11000) {
+                return throwError(
+                  () =>
+                    new ConflictException(`Product ${dto.code} already exists`),
+                );
+              }
+              return throwError(() => new InternalServerErrorException(val));
+            }),
+          ),
+      );
+
+      return product;
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async updateProduct(
+    id: string,
+    dto: UpdateProductDto,
+    authentication: string,
+  ) {
+    try {
+      const product = await lastValueFrom(
+        this.productClient
+          .send('update_product', { id, dto, Authentication: authentication })
+          .pipe(
+            catchError((val) => {
+              if (val.code === 404) {
+                return throwError(
+                  () => new NotFoundException('Product not found'),
+                );
+              }
+              return throwError(() => new InternalServerErrorException(val));
+            }),
+          ),
+      );
+
+      return product;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async deleteProduct(id: string, authentication: string) {
+    try {
+      await this.productClient
+        .send('delete_product', { id, Authentication: authentication })
+        .pipe(
+          catchError((val) => {
+            if (val.error.code === 404) {
+              return throwError(
+                () => new NotFoundException('Product not found'),
+              );
+            }
+            return throwError(() => new InternalServerErrorException(val));
+          }),
+        )
+        .toPromise();
+
+      return { message: 'Product deleted successfully' };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new InternalServerErrorException(error);
     }
   }
