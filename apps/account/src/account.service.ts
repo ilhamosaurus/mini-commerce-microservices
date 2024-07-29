@@ -39,6 +39,17 @@ export class AccountService {
     }
   }
 
+  async payment(totalCost: number, userEmail: string) {
+    try {
+      await this.accountRepository.findOneAndUpdate(
+        { owner: userEmail },
+        { $inc: { balance: -totalCost } },
+      );
+    } catch (error) {
+      throw new RpcException(error);
+    }
+  }
+
   async getBalance(user: User) {
     try {
       const account = await this.getAccount(user.email);

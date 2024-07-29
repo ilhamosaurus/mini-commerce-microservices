@@ -10,7 +10,7 @@ export class Product extends AbstractDocument {
   name: string;
 
   @Prop({ required: true })
-  merchant_id: string;
+  merchant: string;
 
   @Prop({ type: Number })
   price: number;

@@ -2,13 +2,23 @@ import { Inject, Injectable } from '@nestjs/common';
 import { TransactionReposirtory } from './transaction.reposiroty';
 import { PRODUCT_SERVICE } from './constants/service';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { Account, TopupDto, TransactionType } from '@app/common';
+import {
+  Account,
+  ACCOUNT_SERVICE,
+  PaymentDto,
+  Product,
+  TopupDto,
+  TransactionType,
+  User,
+} from '@app/common';
+import { catchError, lastValueFrom, throwError } from 'rxjs';
 
 @Injectable()
 export class TransactionsService {
   constructor(
     private readonly transactionRepository: TransactionReposirtory,
     @Inject(PRODUCT_SERVICE) private productClient: ClientProxy,
+    @Inject(ACCOUNT_SERVICE) private accountClient: ClientProxy,
   ) {}
 
   // async createOrder(dto: CreateOrderDto, authentication: string) {
@@ -44,6 +54,93 @@ export class TransactionsService {
         amount: dto.amount,
       });
     } catch (error) {
+      throw new RpcException(error);
+    }
+  }
+
+  async payment(user: User, dto: PaymentDto, authentication: string) {
+    try {
+      const account: Account = await lastValueFrom(
+        this.accountClient
+          .send('get_account_by_email', {
+            email: user.email,
+            Authentication: authentication,
+          })
+          .pipe(
+            catchError((val) => {
+              if (val.error.code === 404) {
+                return throwError(
+                  () =>
+                    new RpcException({
+                      message: 'Account not found',
+                      code: 404,
+                    }),
+                );
+              }
+
+              return throwError(() => new RpcException(val));
+            }),
+          ),
+      );
+
+      const product: Product = await lastValueFrom(
+        this.productClient
+          .send('get_product_by_code', {
+            code: dto.product_code.toUpperCase(),
+            Authentication: authentication,
+          })
+          .pipe(
+            catchError((val) => {
+              if (val.error.code === 404) {
+                return throwError(
+                  () =>
+                    new RpcException({
+                      message: 'Product not found',
+                      code: 404,
+                    }),
+                );
+              }
+
+              return throwError(() => new RpcException(val));
+            }),
+          ),
+      );
+
+      const invNumber = await this.getInvNumber(account);
+      const totalCost = product.price * dto.qty;
+      if (account.balance < totalCost) {
+        throw new RpcException({ message: 'Insufficient balance', code: 400 });
+      }
+
+      // const session = await this.transactionRepository.startTransaction()
+      const transaction = await this.transactionRepository.create({
+        account_id: account._id,
+        type: TransactionType.PAYMENT,
+        invoice: invNumber,
+        amount: totalCost,
+        buyer: user.email,
+        merchant: product.merchant,
+        description: `Payment for product ${product.name} from ${product.merchant}`,
+      });
+
+      await lastValueFrom(
+        this.accountClient
+          .emit('payment', {
+            totalCost,
+            userEmail: product.merchant,
+            Authentication: authentication,
+          })
+          .pipe(
+            catchError((val) => {
+              return throwError(() => new RpcException(val));
+            }),
+          ),
+      );
+
+      // await session.commitTransaction();
+      return transaction;
+    } catch (error) {
+      // await session.abortTransaction();
       throw new RpcException(error);
     }
   }

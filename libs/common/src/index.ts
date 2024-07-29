@@ -16,3 +16,4 @@ export * from './dto/login.dto';
 export * from './dto/topup.dto';
 export * from './dto/create-product.dto';
 export * from './dto/update-product.dto';
+export * from './dto/payment.dto';

@@ -1,7 +1,21 @@
 import { Controller, UseGuards } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
-import { Account, JwtGuard, RmqService, TopupDto } from '@app/common';
-import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
+import {
+  Account,
+  CurrentUser,
+  JwtGuard,
+  PaymentDto,
+  RmqService,
+  TopupDto,
+  User,
+} from '@app/common';
+import {
+  Ctx,
+  EventPattern,
+  MessagePattern,
+  Payload,
+  RmqContext,
+} from '@nestjs/microservices';
 
 @Controller('transactions')
 export class TransactionsController {
@@ -32,5 +46,22 @@ export class TransactionsController {
   ) {
     await this.transactionsService.topup(payload.dto, payload.account);
     this.rmqService.ack(ctx);
+  }
+
+  @MessagePattern('payment')
+  @UseGuards(JwtGuard)
+  async payment(
+    @CurrentUser() user: User,
+    @Payload() payload: { dto: PaymentDto; Authentication: string },
+    @Ctx() ctx: RmqContext,
+  ) {
+    const transactions = await this.transactionsService.payment(
+      user,
+      payload.dto,
+      payload.Authentication,
+    );
+    this.rmqService.ack(ctx);
+
+    return transactions;
   }
 }

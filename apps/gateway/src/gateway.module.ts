@@ -8,6 +8,7 @@ import {
   AUTH_SERVICE,
   PRODUCT_SERVICE,
   RmqModule,
+  TRANSACTIONS_SERVICE,
 } from '@app/common';
 
 @Module({
@@ -22,7 +23,12 @@ import {
       envFilePath: './apps/gateway/.env',
     }),
     RmqModule.register({
-      names: [AUTH_SERVICE, ACCOUNT_SERVICE, PRODUCT_SERVICE],
+      names: [
+        AUTH_SERVICE,
+        ACCOUNT_SERVICE,
+        PRODUCT_SERVICE,
+        TRANSACTIONS_SERVICE,
+      ],
     }),
   ],
   controllers: [GatewayController],

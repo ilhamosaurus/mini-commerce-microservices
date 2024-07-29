@@ -20,6 +20,7 @@ import {
   Roles,
   CreateProductDto,
   UpdateProductDto,
+  PaymentDto,
 } from '@app/common';
 import { Request, Response } from 'express';
 
@@ -88,5 +89,11 @@ export class GatewayController {
   @Delete('product/:id')
   async deleteProduct(@Req() req: Request, @Param('id') id: string) {
     return this.gatewayService.deleteProduct(id, req.cookies?.Authentication);
+  }
+
+  @UseGuards(JwtGuard)
+  @Post('payment')
+  async payment(@Body() dto: PaymentDto, @Req() req: Request) {
+    return this.gatewayService.payment(dto, req.cookies?.Authentication);
   }
 }

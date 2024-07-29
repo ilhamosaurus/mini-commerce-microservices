@@ -9,3 +9,13 @@ export type Account = {
   owner: string;
   balance: number;
 };
+
+export type Product = {
+  _id: string;
+  code: string;
+  name: string;
+  merchant: string;
+  price: number;
+  weight?: number;
+  description?: string;
+};

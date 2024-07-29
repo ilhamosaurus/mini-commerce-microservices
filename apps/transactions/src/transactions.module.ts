@@ -3,7 +3,13 @@ import { TransactionsController } from './transactions.controller';
 import { TransactionsService } from './transactions.service';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
-import { AuthModule, DatabaseModule, RmqModule, RmqService } from '@app/common';
+import {
+  ACCOUNT_SERVICE,
+  AuthModule,
+  DatabaseModule,
+  RmqModule,
+  RmqService,
+} from '@app/common';
 import { TransactionReposirtory } from './transaction.reposiroty';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PRODUCT_SERVICE } from './constants/service';
@@ -25,7 +31,7 @@ import { Transaction, TransactionSchema } from './schemas/transaction.schema';
       { name: Transaction.name, schema: TransactionSchema },
     ]),
     RmqModule.register({
-      names: [PRODUCT_SERVICE],
+      names: [PRODUCT_SERVICE, ACCOUNT_SERVICE],
     }),
     AuthModule,
   ],

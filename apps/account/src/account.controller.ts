@@ -54,4 +54,25 @@ export class AccountController {
 
     return account;
   }
+
+  @MessagePattern('get_account_by_email')
+  @UseGuards(JwtGuard)
+  async getAccountByEmail(
+    @Payload('email') email: string,
+    @Ctx() ctx: RmqContext,
+  ) {
+    const account = await this.accountService.getAccount(email);
+    this.rmqService.ack(ctx);
+
+    return account;
+  }
+
+  @EventPattern('payment')
+  async payment(
+    @Payload() payload: { totalCost: number; userEmail: string },
+    @Ctx() ctx: RmqContext,
+  ) {
+    await this.accountService.payment(payload.totalCost, payload.userEmail);
+    this.rmqService.ack(ctx);
+  }
 }

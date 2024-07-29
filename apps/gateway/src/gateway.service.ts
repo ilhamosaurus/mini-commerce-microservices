@@ -3,9 +3,11 @@ import {
   AUTH_SERVICE,
   CreateProductDto,
   LoginDto,
+  PaymentDto,
   PRODUCT_SERVICE,
   RegisterDto,
   TopupDto,
+  TRANSACTIONS_SERVICE,
   UpdateProductDto,
   User,
 } from '@app/common';
@@ -26,6 +28,8 @@ export class GatewayService {
     @Inject(AUTH_SERVICE) private readonly authClient: ClientProxy,
     @Inject(ACCOUNT_SERVICE) private readonly accountClient: ClientProxy,
     @Inject(PRODUCT_SERVICE) private readonly productClient: ClientProxy,
+    @Inject(TRANSACTIONS_SERVICE)
+    private readonly transactionClient: ClientProxy,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -231,6 +235,33 @@ export class GatewayService {
         .toPromise();
 
       return { message: 'Product deleted successfully' };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async payment(dto: PaymentDto, authentication: string) {
+    try {
+      const transaction = await lastValueFrom(
+        this.transactionClient
+          .send('payment', {
+            dto,
+            Authentication: authentication,
+          })
+          .pipe(
+            catchError((val) => {
+              if (val.error.code === 404) {
+                return throwError(() => new NotFoundException(val.message));
+              }
+              return throwError(() => new InternalServerErrorException(val));
+            }),
+          ),
+      );
+
+      return transaction;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;

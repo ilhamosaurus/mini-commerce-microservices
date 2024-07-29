@@ -28,7 +28,7 @@ export class ProductService {
         price: dto.price,
         description: dto.description,
         weight: dto.weight,
-        merchant_id: user._id,
+        merchant: user.email,
       });
 
       return product;
@@ -46,7 +46,7 @@ export class ProductService {
       if (!product) {
         throw new RpcException({ error: 'product not found', code: 404 });
       }
-      if (product.merchant_id !== user._id) {
+      if (product.merchant !== user.email) {
         throw new RpcException({ error: 'permission denied', code: 403 });
       }
 
@@ -62,7 +62,7 @@ export class ProductService {
       if (!product) {
         throw new RpcException({ error: 'product not found', code: 404 });
       }
-      if (product.merchant_id !== user._id) {
+      if (product.merchant !== user.email) {
         throw new RpcException({ error: 'permission denied', code: 403 });
       }
       return this.productRepository.findOneAndDelete({ _id: id });
