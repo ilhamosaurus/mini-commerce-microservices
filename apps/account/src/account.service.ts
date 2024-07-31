@@ -39,11 +39,15 @@ export class AccountService {
     }
   }
 
-  async payment(totalCost: number, userEmail: string) {
+  async payment(totalCost: number, buyerEmail: string, merchantEmail: string) {
     try {
       await this.accountRepository.findOneAndUpdate(
-        { owner: userEmail },
+        { owner: buyerEmail },
         { $inc: { balance: -totalCost } },
+      );
+      await this.accountRepository.findOneAndUpdate(
+        { owner: merchantEmail },
+        { $inc: { balance: totalCost } },
       );
     } catch (error) {
       throw new RpcException(error);

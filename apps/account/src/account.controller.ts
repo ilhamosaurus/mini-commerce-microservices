@@ -69,10 +69,15 @@ export class AccountController {
 
   @EventPattern('payment')
   async payment(
-    @Payload() payload: { totalCost: number; userEmail: string },
+    @Payload()
+    payload: { totalCost: number; buyerEmail: string; merchantEmail: string },
     @Ctx() ctx: RmqContext,
   ) {
-    await this.accountService.payment(payload.totalCost, payload.userEmail);
+    await this.accountService.payment(
+      payload.totalCost,
+      payload.buyerEmail,
+      payload.merchantEmail,
+    );
     this.rmqService.ack(ctx);
   }
 }

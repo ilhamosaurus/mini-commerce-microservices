@@ -5,18 +5,20 @@ services:
     build:
       context: .
       dockerfile: ./apps/gateway/Dockerfile
-      target: development
-    command: npm run start:dev gateway
     env_file:
       - ./apps/gateway/.env
     depends_on:
       - mongodb-primary
       - mongodb-secondary
       - mongodb-arbiter
+      - rabbitmq
       - auth
       - account
+      - product
+      - transactions
     environment:
-      - MONGODB_URI=mongodb://mongodb-primary:27017/mini-commerce
+      - MONGODB_URI=mongodb://root:password123@mongodb-primary:27017/
+      - RABBIT_MQ_URI=amqp://rabbitmq:5672
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
@@ -27,15 +29,15 @@ services:
     build:
       context: .
       dockerfile: ./apps/auth/Dockerfile
-      target: development
-    command: npm run start:dev auth
     depends_on:
       - mongodb-primary
       - mongodb-secondary
       - mongodb-arbiter
+      - rabbitmq
       - account
     environment:
-      - MONGODB_URI=mongodb://mongodb-primary:27017/mini-commerce
+      - MONGODB_URI=mongodb://root:password123@mongodb-primary:27017/
+      - RABBIT_MQ_URI=amqp://rabbitmq:5672
     env_file:
       - ./apps/auth/.env
     volumes:
@@ -46,19 +48,64 @@ services:
     build:
       context: .
       dockerfile: ./apps/account/Dockerfile
-      target: development
-    command: npm run start:dev account
     depends_on:
       - mongodb-primary
       - mongodb-secondary
       - mongodb-arbiter
+      - rabbitmq
     environment:
-      - MONGODB_URI=mongodb://mongodb-primary:27017/mini-commerce
+      - MONGODB_URI=mongodb://root:password123@mongodb-primary:27017/
+      - RABBIT_MQ_URI=amqp://rabbitmq:5672
     env_file:
       - ./apps/account/.env
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
+
+  product:
+    build:
+      context: .
+      dockerfile: ./apps/product/Dockerfile
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+      - rabbitmq
+      - auth
+    environment:
+      - MONGODB_URI=mongodb://root:password123@mongodb-primary:27017/
+      - RABBIT_MQ_URI=amqp://rabbitmq:5672
+    env_file:
+      - ./apps/product/.env
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+
+  transactions:
+    build:
+      context: .
+      dockerfile: ./apps/transactions/Dockerfile
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+      - rabbitmq
+      - product
+      - account
+      - auth
+    environment:
+      - MONGODB_URI=mongodb://root:password123@mongodb-primary:27017/
+      - RABBIT_MQ_URI=amqp://rabbitmq:5672
+    env_file:
+      - ./apps/transactions/.env
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+
+  rabbitmq:
+    image: rabbitmq
+    ports:
+      - '5678:5672'
 
   mongodb-primary:
     image: docker.io/bitnami/mongodb:5.0
@@ -70,7 +117,7 @@ services:
     volumes:
       - 'mongodb_master_data:/bitnami/mongodb'
     ports:
-      - '27017:27017'
+      - '27018:27017'
 
   mongodb-secondary:
     image: docker.io/bitnami/mongodb:5.0

@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: ./apps/gateway/Dockerfile
+      target: development
+    command: npm run start:dev gateway
+    env_file:
+      - ./apps/gateway/.env
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+      - rabbitmq
+      - auth
+      - account
+      - product
+      - transactions
+    environment:
+      - MONGODB_URI=mongodb://root:password123@mongodb-primary:27017/mini-commerce
+      - RABBIT_MQ_URI=amqp://rabbitmq:5672
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - '8080:8080'
+
+  auth:
+    build:
+      context: .
+      dockerfile: ./apps/auth/Dockerfile
+      target: development
+    command: npm run start:dev auth
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+      - rabbitmq
+      - account
+    environment:
+      - MONGODB_URI=mongodb://root:password123@mongodb-primary:27017/mini-commerce
+      - RABBIT_MQ_URI=amqp://rabbitmq:5672
+    env_file:
+      - ./apps/auth/.env
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+
+  account:
+    build:
+      context: .
+      dockerfile: ./apps/account/Dockerfile
+      target: development
+    command: npm run start:dev account
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+      - rabbitmq
+    environment:
+      - MONGODB_URI=mongodb://root:password123@mongodb-primary:27017/mini-commerce
+      - RABBIT_MQ_URI=amqp://rabbitmq:5672
+    env_file:
+      - ./apps/account/.env
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+
+  product:
+    build:
+      context: .
+      dockerfile: ./apps/product/Dockerfile
+      target: development
+    command: npm run start:dev product
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+      - rabbitmq
+      - auth
+    environment:
+      - MONGODB_URI=mongodb://root:password123@mongodb-primary:27017/mini-commerce
+      - RABBIT_MQ_URI=amqp://rabbitmq:5672
+    env_file:
+      - ./apps/product/.env
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+
+  transactions:
+    build:
+      context: .
+      dockerfile: ./apps/transactions/Dockerfile
+      target: development
+    command: npm run start:dev transactions
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+      - rabbitmq
+      - product
+      - account
+      - auth
+    environment:
+      - MONGODB_URI=mongodb://root:password123@mongodb-primary:27017/mini-commerce
+      - RABBIT_MQ_URI=amqp://rabbitmq:5672
+    env_file:
+      - ./apps/transactions/.env
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+
+  rabbitmq:
+    image: rabbitmq
+    ports:
+      - '5678:5672'
+
+  mongodb-primary:
+    image: docker.io/bitnami/mongodb:5.0
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-primary
+      - MONGODB_REPLICA_SET_MODE=primary
+      - MONGODB_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+    volumes:
+      - 'mongodb_master_data:/bitnami/mongodb'
+    ports:
+      - '27018:27017'
+
+  mongodb-secondary:
+    image: docker.io/bitnami/mongodb:5.0
+    depends_on:
+      - mongodb-primary
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-secondary
+      - MONGODB_REPLICA_SET_MODE=secondary
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+
+  mongodb-arbiter:
+    image: docker.io/bitnami/mongodb:5.0
+    depends_on:
+      - mongodb-primary
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-arbiter
+      - MONGODB_REPLICA_SET_MODE=arbiter
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+
+volumes:
+  mongodb_master_data:
+    driver: local

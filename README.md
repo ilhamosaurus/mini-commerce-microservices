@@ -24,7 +24,7 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### Hi! this time i build Mini-commerce API using Nest JS, MongoDB, RabbitMQ, with microservice architecture. Each service has its own build and can communicated to each other using Rabbit MQ as Message broker, but it build using shared dependencies so i wish it does not take a lot of space building it!
 
 ## Installation
 
@@ -36,26 +36,26 @@ $ npm install
 
 ```bash
 # development
-$ npm run start
+$ npm run start <service name>
 
 # watch mode
-$ npm run start:dev
+$ npm run start:dev <service name>
 
 # production mode
-$ npm run start:prod
+$ npm run start:prod <service name>
 ```
 
-## Test
+## Running on Docker
 
 ```bash
-# unit tests
-$ npm run test
+# building image
+$ docker-compose -f docker-compose.production.yml build
 
-# e2e tests
-$ npm run test:e2e
+# development mode
+$ docker-compose -f docker-compose.development.yml up
 
 # test coverage
-$ npm run test:cov
+$ docker-compose -f docker-compose.production.yml up
 ```
 
 ## Support

@@ -21,28 +21,6 @@ export class TransactionsService {
     @Inject(ACCOUNT_SERVICE) private accountClient: ClientProxy,
   ) {}
 
-  // async createOrder(dto: CreateOrderDto, authentication: string) {
-  //   // const sessions = await this.transactionRepository.startTransaction();
-  //   try {
-  //     const order = await this.transactionRepository.create(dto);
-  //     await lastValueFrom(
-  //       this.productClient.emit('order_created', {
-  //         order,
-  //         Authentication: authentication,
-  //       }),
-  //     );
-  //     // await sessions.commitTransaction();
-  //     return order;
-  //   } catch (error) {
-  //     // await sessions.abortTransaction();
-  //     throw new InternalServerErrorException(error);
-  //   }
-  // }
-
-  // async findOrders() {
-  //   return this.transactionRepository.find({});
-  // }
-
   async topup(dto: TopupDto, account: Account) {
     try {
       const invNumber = await this.getInvNumber(account);
@@ -59,30 +37,8 @@ export class TransactionsService {
   }
 
   async payment(user: User, dto: PaymentDto, authentication: string) {
+    const session = await this.transactionRepository.startTransaction();
     try {
-      const account: Account = await lastValueFrom(
-        this.accountClient
-          .send('get_account_by_email', {
-            email: user.email,
-            Authentication: authentication,
-          })
-          .pipe(
-            catchError((val) => {
-              if (val.error.code === 404) {
-                return throwError(
-                  () =>
-                    new RpcException({
-                      message: 'Account not found',
-                      code: 404,
-                    }),
-                );
-              }
-
-              return throwError(() => new RpcException(val));
-            }),
-          ),
-      );
-
       const product: Product = await lastValueFrom(
         this.productClient
           .send('get_product_by_code', {
@@ -91,7 +47,7 @@ export class TransactionsService {
           })
           .pipe(
             catchError((val) => {
-              if (val.error.code === 404) {
+              if (val.code === 404) {
                 return throwError(
                   () =>
                     new RpcException({
@@ -106,28 +62,85 @@ export class TransactionsService {
           ),
       );
 
-      const invNumber = await this.getInvNumber(account);
+      const buyerAccount: Account = await lastValueFrom(
+        this.accountClient
+          .send('get_account_by_email', {
+            email: user.email,
+            Authentication: authentication,
+          })
+          .pipe(
+            catchError((val) => {
+              if (val.code === 404) {
+                return throwError(
+                  () =>
+                    new RpcException({
+                      message: 'Account not found',
+                      code: 404,
+                    }),
+                );
+              }
+
+              return throwError(() => new RpcException(val));
+            }),
+          ),
+      );
+
+      const merchantAccount: Account = await lastValueFrom(
+        this.accountClient
+          .send('get_account_by_email', {
+            email: product.merchant,
+            Authentication: authentication,
+          })
+          .pipe(
+            catchError((val) => {
+              if (val.code === 404) {
+                return throwError(
+                  () =>
+                    new RpcException({
+                      message: 'Account not found',
+                      code: 404,
+                    }),
+                );
+              }
+
+              return throwError(() => new RpcException(val));
+            }),
+          ),
+      );
+
+      const buyerInvNumber = await this.getInvNumber(buyerAccount);
+      const merchantInvNumber = await this.getInvNumber(merchantAccount);
       const totalCost = product.price * dto.qty;
-      if (account.balance < totalCost) {
+      if (buyerAccount.balance < totalCost) {
         throw new RpcException({ message: 'Insufficient balance', code: 400 });
       }
 
-      // const session = await this.transactionRepository.startTransaction()
       const transaction = await this.transactionRepository.create({
-        account_id: account._id,
+        account_id: buyerAccount._id,
         type: TransactionType.PAYMENT,
-        invoice: invNumber,
+        invoice: buyerInvNumber,
         amount: totalCost,
         buyer: user.email,
         merchant: product.merchant,
         description: `Payment for product ${product.name} from ${product.merchant}`,
       });
 
+      await this.transactionRepository.create({
+        account_id: merchantAccount._id,
+        type: TransactionType.REVENUE,
+        invoice: merchantInvNumber,
+        amount: totalCost,
+        buyer: user.email,
+        merchant: product.merchant,
+        description: `Payment for product ${product.name} from ${buyerAccount.owner}`,
+      });
+
       await lastValueFrom(
         this.accountClient
           .emit('payment', {
             totalCost,
-            userEmail: product.merchant,
+            buyerEmail: user.email,
+            merchantEmail: merchantAccount.owner,
             Authentication: authentication,
           })
           .pipe(
@@ -137,10 +150,10 @@ export class TransactionsService {
           ),
       );
 
-      // await session.commitTransaction();
+      await session.commitTransaction();
       return transaction;
     } catch (error) {
-      // await session.abortTransaction();
+      await session.abortTransaction();
       throw new RpcException(error);
     }
   }

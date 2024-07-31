@@ -12,6 +12,7 @@ import {
   User,
 } from '@app/common';
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -253,6 +254,9 @@ export class GatewayService {
           })
           .pipe(
             catchError((val) => {
+              if (val.error.code === 400) {
+                return throwError(() => new BadRequestException(val.message));
+              }
               if (val.error.code === 404) {
                 return throwError(() => new NotFoundException(val.message));
               }
@@ -264,6 +268,9 @@ export class GatewayService {
       return transaction;
     } catch (error) {
       if (error instanceof NotFoundException) {
+        throw error;
+      }
+      if (error instanceof BadRequestException) {
         throw error;
       }
       throw new InternalServerErrorException(error);

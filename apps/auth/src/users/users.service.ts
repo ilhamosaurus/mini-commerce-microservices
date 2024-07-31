@@ -15,7 +15,7 @@ export class UsersService {
   ) {}
 
   async register(dto: RegisterDto) {
-    // const sessions = await this.usersRepository.startTransaction();
+    const sessions = await this.usersRepository.startTransaction();
     try {
       const user = await this.usersRepository.create({
         email: dto.email,
@@ -29,13 +29,13 @@ export class UsersService {
           user,
         }),
       );
-      // await sessions.commitTransaction();
+      await sessions.commitTransaction();
       return res;
     } catch (error) {
+      await sessions.abortTransaction();
       if (error.message.includes('E11000')) {
         throw new RpcException(error);
       }
-      // await sessions.abortTransaction();
       throw new RpcException(error);
     }
   }

@@ -102,12 +102,12 @@ export class GatewayController {
   @Get('transactions')
   async getTransactionsHistory(
     @Req() req: Request,
-    @Query() query: { limit?: number; offset?: number },
+    @Query() query: { limit?: string; offset?: string },
   ) {
     return this.gatewayService.getTransactionsHistory(
       req.cookies?.Authentication,
-      query.limit,
-      query.offset,
+      +query.limit,
+      +query.offset,
     );
   }
 }
