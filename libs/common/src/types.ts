@@ -1,3 +1,5 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 export type User = {
   _id: string;
   email: string;
@@ -19,3 +21,83 @@ export type Product = {
   weight?: number;
   description?: string;
 };
+
+export class GetBalanceReponse {
+  @ApiProperty({ type: String, description: "User's account id" })
+  _id: string;
+  @ApiProperty({ type: String, description: "User's Email" })
+  owner: string;
+  @ApiProperty({ type: Number, description: 'User account balance' })
+  balance: number;
+}
+
+export class ProductResponse {
+  @ApiProperty({ type: String, description: "Product's automate generate id" })
+  _id: string;
+  @ApiProperty({ type: String, description: "Unique Product's code by user" })
+  code: string;
+  @ApiProperty({ type: String, description: "Product's name" })
+  name: string;
+  @ApiProperty({ type: String, description: 'Product owner' })
+  merchant: string;
+  @ApiProperty({ type: Number, description: "Product's price" })
+  price: number;
+  @ApiProperty({ type: Number, description: "Product's weight" })
+  weight?: number;
+  @ApiProperty({ type: String, description: "Product's description" })
+  description?: string;
+}
+
+export class TransactionResponse {
+  @ApiProperty({
+    type: String,
+    description: "Transaction's automate generate id",
+    example: '5f9d9a9d9a9d9a9d9a9d9a9d',
+  })
+  _id: string;
+  @ApiProperty({
+    type: String,
+    description: "Transaction's Unique invoice code",
+    example: 'INV03082024-00001',
+  })
+  invoice: string;
+  @ApiProperty({
+    enum: ['TOPUP', 'PAYMENT', 'REVENUE'],
+    description: "Transaction's type",
+    example: 'PAYMENT',
+  })
+  type: 'TOPUP' | 'PAYMENT' | 'REVENUE';
+  @ApiProperty({
+    type: String,
+    description: "Transaction's buyer",
+    required: false,
+    example: 'test@mail.com',
+  })
+  buyer?: string;
+  @ApiProperty({
+    type: String,
+    description: "Transaction's merchant",
+    required: false,
+    example: 'test@mail.com',
+  })
+  merchant?: string;
+  @ApiProperty({
+    type: Number,
+    description: "Transaction's amount",
+    example: 103900.08,
+  })
+  amount: number;
+  @ApiProperty({
+    type: String,
+    description: "Transaction's description",
+    required: false,
+    example: 'test description',
+  })
+  description?: string;
+  @ApiProperty({
+    type: Date,
+    description: "Transaction's created at",
+    example: '2020-08-30T00:00:00.000Z',
+  })
+  created_at?: Date;
+}

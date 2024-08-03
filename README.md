@@ -26,6 +26,8 @@
 
 ### Hi! this time i build Mini-commerce API using Nest JS, MongoDB, RabbitMQ, with microservice architecture. Each service has its own build and can communicated to each other using Rabbit MQ as Message broker, but it build using shared dependencies so i wish it does not take a lot of space building it!
 
+### You may also see `<host>:<port>/api/docs` for API documentation
+
 ## Installation
 
 ```bash
