@@ -18,7 +18,7 @@ export class Transaction extends AbstractDocument {
   @Prop({ required: false })
   merchant?: string;
 
-  @Prop({ type: Number })
+  @Prop({ type: 'Decimal128' })
   amount: number;
 
   @Prop({ required: false })

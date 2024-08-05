@@ -9,7 +9,9 @@ export type User = {
 export type Account = {
   _id: string;
   owner: string;
-  balance: number;
+  balance: {
+    $numberDecimal: string;
+  };
 };
 
 export type Product = {
@@ -27,8 +29,8 @@ export class GetBalanceReponse {
   _id: string;
   @ApiProperty({ type: String, description: "User's Email" })
   owner: string;
-  @ApiProperty({ type: Number, description: 'User account balance' })
-  balance: number;
+  @ApiProperty({ type: String, description: 'User account balance' })
+  balance: string;
 }
 
 export class ProductResponse {
@@ -82,11 +84,11 @@ export class TransactionResponse {
   })
   merchant?: string;
   @ApiProperty({
-    type: Number,
+    type: String,
     description: "Transaction's amount",
-    example: 103900.08,
+    example: 'Rp 103.900,08',
   })
-  amount: number;
+  amount: string;
   @ApiProperty({
     type: String,
     description: "Transaction's description",

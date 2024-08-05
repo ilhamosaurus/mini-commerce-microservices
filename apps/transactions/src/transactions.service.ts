@@ -12,6 +12,7 @@ import {
   User,
 } from '@app/common';
 import { catchError, lastValueFrom, throwError } from 'rxjs';
+import { Transaction } from './schemas/transaction.schema';
 
 @Injectable()
 export class TransactionsService {
@@ -23,14 +24,17 @@ export class TransactionsService {
 
   async topup(dto: TopupDto, account: Account) {
     try {
+      console.log('dto: ', dto);
+      console.log('account: ', account);
       const invNumber = await this.getInvNumber(account);
-
-      await this.transactionRepository.create({
+      console.log('invNumber: ', invNumber);
+      const transaction = await this.transactionRepository.create({
         account_id: account._id,
         type: TransactionType.TOPUP,
         invoice: invNumber,
         amount: dto.amount,
       });
+      console.log('transaction:', transaction);
     } catch (error) {
       throw new RpcException(error);
     }
@@ -111,7 +115,7 @@ export class TransactionsService {
       const buyerInvNumber = await this.getInvNumber(buyerAccount);
       const merchantInvNumber = await this.getInvNumber(merchantAccount);
       const totalCost = product.price * dto.qty;
-      if (buyerAccount.balance < totalCost) {
+      if (Number(buyerAccount.balance.$numberDecimal) < totalCost) {
         throw new RpcException({ message: 'Insufficient balance', code: 400 });
       }
 
@@ -151,7 +155,8 @@ export class TransactionsService {
       );
 
       await session.commitTransaction();
-      return transaction;
+      const result = this.formater(transaction);
+      return result;
     } catch (error) {
       await session.abortTransaction();
       throw new RpcException(error);
@@ -196,31 +201,53 @@ export class TransactionsService {
           { created_at: 'desc' },
         );
 
-        return transactions;
+        return transactions.map((transaction) => this.formater(transaction));
       }
 
       const transactions = await this.transactionRepository.find({
         account_id: account._id,
       });
 
-      return transactions;
+      return transactions.map((transaction) => this.formater(transaction));
     } catch (error) {
       throw new RpcException(error);
     }
   }
 
   async getInvNumber(account: Account) {
-    const today = new Date();
-    const date = `${today.getFullYear()}-${(today.getMonth() + 1)
-      .toString()
-      .padStart(2, '0')}-${today.getDate()}T00:00:00Z`;
-    const count = await this.transactionRepository.count({
-      account_id: account._id,
-      created_at: { $gte: date },
+    try {
+      const today = new Date();
+      const date = `${today.getFullYear()}-${(today.getMonth() + 1)
+        .toString()
+        .padStart(
+          2,
+          '0',
+        )}-${today.getDate().toString().padStart(2, '0')}T00:00:00Z`;
+      const count = await this.transactionRepository.count({
+        account_id: account._id,
+        created_at: { $gte: date },
+      });
+
+      const invDate = today.toJSON().slice(0, 10).split('-').reverse().join('');
+      const invNumber = `INV${invDate}-${(count ? count + 1 : 1).toString().padStart(3, '0')}`;
+      return invNumber;
+    } catch (error) {
+      console.log('error', error);
+      throw error;
+    }
+  }
+
+  private formater(transaction: Transaction) {
+    const amount = transaction.amount.toString();
+
+    const formatter = new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
     });
 
-    const invDate = today.toJSON().slice(0, 10).split('-').reverse().join('');
-    const invNumber = `INV${invDate}-${(count + 1).toString().padStart(3, '0')}`;
-    return invNumber;
+    return {
+      ...transaction,
+      amount: formatter.format(Number(amount)),
+    };
   }
 }

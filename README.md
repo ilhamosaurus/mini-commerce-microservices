@@ -30,8 +30,18 @@
 
 ## Installation
 
+1. Establish your `.env` file for every service in apps folder by changing currently `.env.example` file
+
+2. Then install dependencies by inserting this command on your terminal
+
 ```bash
 $ npm install
+```
+
+3. (Optional) Try build the apps first
+
+```bash
+$ npm run build
 ```
 
 ## Running the app
@@ -59,6 +69,20 @@ $ docker-compose -f docker-compose.development.yml up
 # test coverage
 $ docker-compose -f docker-compose.production.yml up
 ```
+
+## List of Endpoint
+
+- POST /register
+- POST /login
+- GET /product
+- POST /product
+- GET /product/:id
+- PATCH /product/:id
+- DELETE /product/:id
+- GET /balance
+- POST /topup
+- POST /payment
+- GET /transactions?limit=&offset=
 
 ## Support
 

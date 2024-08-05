@@ -6,7 +6,7 @@ export class Account extends AbstractDocument {
   @Prop()
   owner: string;
 
-  @Prop({ type: Number, default: 0 })
+  @Prop({ type: 'Decimal128', default: 0 })
   balance: number;
 }
 

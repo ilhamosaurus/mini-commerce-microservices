@@ -3,6 +3,7 @@ import { AccountRepository } from './account.repository';
 import { TRANSACTIONS_SERVICE, User } from '@app/common';
 import { TopupDto } from './dto/topup.dto';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { Account } from './schemas/account.schema';
 
 @Injectable()
 export class AccountService {
@@ -33,7 +34,9 @@ export class AccountService {
         Authentication: authentication,
       });
 
-      return account;
+      const result = this.fomater(account);
+
+      return result;
     } catch (error) {
       throw new RpcException(error);
     }
@@ -58,9 +61,24 @@ export class AccountService {
     try {
       const account = await this.getAccount(user.email);
 
-      return { owner: account.owner, balance: account.balance };
+      const data = this.fomater(account);
+      return data;
     } catch (error) {
       throw new RpcException(error);
     }
+  }
+
+  private async fomater(account: Account) {
+    const balance = account.balance.toString();
+
+    const formater = new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+    });
+
+    return {
+      owner: account.owner,
+      balance: formater.format(Number(balance)),
+    };
   }
 }
